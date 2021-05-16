@@ -1,23 +1,27 @@
 # WheelApi
 
-**TODO: Add description**
+### Requirements
 
-## Installation
+- MySQL
+- Elixir + Erlang Runtime
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `wheel_api` to your list of dependencies in `mix.exs`:
+### Environment Variables
 
-```elixir
-def deps do
-  [
-    {:wheel_api, "~> 0.1.0"}
-  ]
-end
-```
+- `WHEEL_API_DB_NAME`:  The name of the database to point to
+- `WHEEL_API_DB_USER`:  The username to log into the DB with
+- `WHEEL_API_DB_PASS`:  The password to use to log into the DB
+- `WHEEL_API_DB_HOST`:  The hostname to use for the DB (`"localhost"` for local testing)
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/wheel_api](https://hexdocs.pm/wheel_api).
+### Instructions
 
+1. Build the Database with `mix ecto.create`
+2. Build all the tables with `mix ecto.migrate`
+3. For local use, start the application with `iex -S mix`
 
-Deployment:  https://blog.lelonek.me/minimal-elixir-http2-server-64188d0c1f3a
+The API (**WIP**) can be found at `http://localhost:4000`
+
+In `IEX`, you can run commands from `lib/wheel_api/database` modules to perform actions on the DB.
+
+_TODO: Deployment_
+
+https://blog.lelonek.me/minimal-elixir-http2-server-64188d0c1f3a
