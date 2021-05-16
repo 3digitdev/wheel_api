@@ -1,0 +1,102 @@
+Actions:
+    Sell a Call
+        Re-buy the Call
+        Assigned -> Buy Shares
+    Sell a Put
+        Re-buy the Put
+        Assigned -> Sell Shares
+    Buy Shares
+        Increments of 100
+    Sell Shares
+        Increments of 100
+
+
+Sell Options  (Credits)
+    - Date of sale (today)
+    - Expiration Date (upcoming friday) [have it jump to each Friday?]
+    - Strike
+    - Quantity (1)
+    - Premium (0.00) [+/- 0.01 and 0.10 buttons, editable]
+    - Status (Open/Closed)
+Buy (Credits)/Sell (Debits) Shares
+    - Date (today)
+    - Quantity (100) [increments of 100]
+    - Price (0.00) [+/- 0.01 and 0.10 buttons, editable]
+    - Status (Held/Sold)
+    ------
+    This should modify a tracker of how many shares you own at any time
+Repurchasing Options  (Debits)
+    - Date (today)
+    - Quantity (current open # of the option)
+    - Premium (current open premium)
+
+
+Running Totals:
+    (Sum of Credits) - (Sum of Debits)
+    If positions are fully closed, this is Profit/Loss
+    If assigned shares, this is Cost Basis
+
+Target Call Price:
+    abs(Running Total / # Shares Assigned)
+
+NOTES:
+    Warn if trying to sell a Call at/below Target Call Price
+    Tap on an "open" Option opens dialogue to "close" it
+
+
+LIST OF WHEELS
+    Simple list of them by name/ID that's scrollable
+    Tapping on each one brings you to WHEEL DISPLAY for that strategy
+    Long-press on one gives you "Delete" and "Rename" options
+    Button at the bottom for "Create New Wheel"
+
+WHEEL DISPLAY:
+    Top bar: Running Totals
+        - What it is (Cost Basis, P/L, etc)
+        - Total
+        - Debits Total
+        - Credits Total
+    Bottom Bar Buttons:
+        - "Options"
+        - "Shares"
+    Main Screen:
+        View 1: Logbook
+            Recent activity, latest on top
+            Each entry:
+                Date
+                Type (Buy/Sell Call/Put/Shares, Expiration if option)
+                    ${STRIKE} {TYPE} {EXPIRY}
+                    {COUNT} Shares @ {PRICE}
+                Cost (as decimal, as well as premium/price * # shares)
+                    {DECIMAL COST} ({FULL COST})
+        View 2: Form to fill
+            See attributes for different choices
+
+
+
+Option:
+    id (int)
+    name (CALL, PUT)
+    action (SELL, BUY)
+    strike (float)
+    premium (float)
+    quantity (int)
+    open (bool)
+    sale_date (date)
+    exp_date (date)
+    wheel_id (int, FK)
+
+Wheel:
+    id (int)
+    ticker (str)
+    description (str)
+    subtotal (float)  [credits - debits]
+    positions_closed (bool) [if all of the linked Options are open=False]
+    assigned_shares (bool)  [if any of the linked Shares are held=True]
+
+Shares:  [Individual entry for each transaction]
+    quantity (int)
+    cost (float)   [PER SHARE]
+    sale_date (date)
+    held (bool)
+    wheel_id (int, FK)

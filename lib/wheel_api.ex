@@ -1,18 +1,12 @@
 defmodule WheelApi do
+  use Application
+
   @moduledoc """
   Documentation for `WheelApi`.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> WheelApi.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  @impl true
+  def start(_type, _args) do
+    WheelApi.Supervisor.start_link(name: WheelApi.Supervisor)
   end
 end
