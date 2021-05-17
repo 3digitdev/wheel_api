@@ -15,6 +15,18 @@ defmodule WheelApi.Share do
         belongs_to :wheel, Wheel
     end
 
+    def as_map(share) do
+        %{
+            id: share.id,
+            quantity: share.quantity,
+            cost: share.cost,
+            sale_date: share.sale_date,
+            action: share.action
+        }
+    end
+
+    def as_list(shares), do: shares |> Enum.map(&(as_map(&1)))
+
     @spec exists?(pos_integer()) :: boolean
     def exists?(share_id) do
         DB.exists?(from s in WheelApi.Share, where: s.id == ^share_id)

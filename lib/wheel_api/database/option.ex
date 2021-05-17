@@ -19,6 +19,22 @@ defmodule WheelApi.Option do
         belongs_to :wheel, Wheel
     end
 
+    def as_map(option) do
+        %{
+            id: option.id,
+            type: option.type,
+            action: option.action,
+            strike: option.strike,
+            quantity: option.quantity,
+            premium: option.premium,
+            open: option.open,
+            sale_date: option.sale_date,
+            exp_date: option.exp_date
+        }
+    end
+
+    def as_list(options), do: options |> Enum.map(&(as_map(&1)))
+
     @spec exists?(pos_integer()) :: boolean
     def exists?(option_id) do
         DB.exists?(from o in WheelApi.Option, where: o.id == ^option_id)
