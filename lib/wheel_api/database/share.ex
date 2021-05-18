@@ -2,29 +2,53 @@ defmodule WheelApi.Share do
     use Ecto.Schema
 
     import Ecto.Query
-    import Ecto.Changeset, only: [change: 2]
+    import Ecto.Changeset
 
     alias WheelApi.Repo, as: DB
     alias WheelApi.Wheel
 
     schema "shares" do
-        field :quantity, :integer, default: 0
-        field :cost, :float, default: 0.0
+        field :quantity, :integer
+        field :cost, :float
         field :sale_date, :date
         field :action, :string
         belongs_to :wheel, Wheel
     end
 
+    def changeset(share, params) do
+        share
+            |> cast(params, [:quantity, :cost, :sale_date, :action])
+            |> validate_required([:quantity, :cost, :sale_date, :action], message: "must be provided in body")
+            |> validate_format(:action, ~r/(?:BUY|SELL)/, message: "must be either 'BUY' or 'SELL'")
+            |> validate_number(:quantity, greater_than: 0, message: "must be > 0")
+            |> validate_number(:cost, greater_than: 0.0, message: "must be > 0.0")
+    end
+
+    @spec as_map(%WheelApi.Share{}) :: map()
     def as_map(share) do
         %{
             id: share.id,
             quantity: share.quantity,
             cost: share.cost,
             sale_date: share.sale_date,
-            action: share.action
+            action: share.action,
+            wheel_id: share.wheel_id
         }
     end
 
+    @spec from_map(map(), pos_integer()) :: %WheelApi.Share{}
+    def from_map(map, id) do
+        %WheelApi.Share{
+            id: id,
+            quantity: Map.get(map, "quantity"),
+            cost: Map.get(map, "cost"),
+            sale_date: Map.get(map, "sale_date"),
+            action: Map.get(map, "action"),
+            wheel_id: Map.get(map, "wheel_id")
+        }
+    end
+
+    @spec as_list([%WheelApi.Share{}]) :: [map()]
     def as_list(shares), do: shares |> Enum.map(&(as_map(&1)))
 
     @spec exists?(pos_integer()) :: boolean
@@ -33,64 +57,75 @@ defmodule WheelApi.Share do
     end
 
     @spec get_all(pos_integer()) :: [%WheelApi.Share{}]
-    def get_all(limit), do: DB.all from share in WheelApi.Share, limit: ^limit
+    def get_all(limit), do: (from share in WheelApi.Share, limit: ^limit) |> DB.all |> as_list
 
     @spec get_all() :: [%WheelApi.Share{}]
-    def get_all, do: DB.all from share in WheelApi.Share
+    def get_all, do: (from share in WheelApi.Share) |> DB.all |> as_list
 
-    @spec get_single(pos_integer()) :: {:ok, %WheelApi.Share{}} | :error
-    def get_single(id) do
-        case DB.get WheelApi.Share, id do
-            :nil -> :error
-            share -> {:ok, share}
-        end
-    end
-
-    @spec delete(pos_integer()) :: :ok
-    def delete(id) do
-        case WheelApi.Share.get_single(id) do
-            :error -> :ok
-            {:ok, share} -> DB.delete share; :ok
-        end
-    end
-
-    @spec create(pos_integer(), pos_integer(), float(), Ecto.Date, String.t()) :: {:ok, %WheelApi.Share{}} | :error
-    def create(wheel_id, quantity, cost, sale_date, action) do
+    @spec get_single(pos_integer(), pos_integer()) :: {:ok, %WheelApi.Share{}} | {:error, String.t()}
+    def get_single(share_id, wheel_id) do
         if Wheel.exists?(wheel_id) do
-            case DB.insert %WheelApi.Share{
-                quantity: quantity,
-                cost: cost,
-                sale_date: sale_date,
-                action: action,
-                wheel_id: wheel_id
-            } do
-                {:ok, struct} -> {:ok, struct}
-                {:error, e} -> IO.inspect e; :error
+            case DB.get WheelApi.Share, share_id do
+                :nil -> {:error, "not found"}
+                share ->
+                    if share.wheel_id == wheel_id do
+                        {:ok, as_map(share)}
+                    else
+                        {:error, "not this wheel"}
+                    end
             end
         else
-            :error
+            {:error, "no wheel"}
         end
     end
 
-    def update(new_share) do
-        case WheelApi.Share.get_single(new_share.id) do
-            :error -> :error
-            {:ok, share} ->
-                changeset = change(
-                    share,
-                    type: new_share.type,
-                    action: new_share.action,
-                    strike: new_share.strike,
-                    quantity: new_share.quantity,
-                    premium: new_share.premium,
-                    open: new_share.open,
-                    sale_date: new_share.sale_date,
-                    exp_date: new_share.exp_date
-                )
-                case DB.update(changeset) do
-                    {:error, _} -> :error
-                    success -> success
+    @spec delete(pos_integer(), pos_integer()) :: :ok | :error
+    def delete(id, wheel_id) do
+        case WheelApi.Share.get_single(id, wheel_id) do
+            {:error, err} ->
+                case err do
+                    "not found" -> :ok
+                    e -> IO.puts e; :error
                 end
+            {:ok, share} -> share |> from_map(id) |> DB.delete; :ok
+        end
+    end
+
+    @spec create(%WheelApi.Share{}, pos_integer()) :: {:ok, map()} | {:error, String.t()}
+    def create(share, wheel_id) do
+        if Wheel.exists?(wheel_id) do
+            case DB.insert share do
+                {:ok, share_struct} -> {:ok, as_map(share_struct)}
+                {:error, _} -> {:error, "db"}
+            end
+        else
+            {:error, "no wheel"}
+        end
+    end
+
+    @spec update(%WheelApi.Share{}, pos_integer(), pos_integer()) :: {:ok, map()} | {:error, String.t()}
+    def update(new_share, share_id, wheel_id) do
+        if Wheel.exists?(wheel_id) do
+            case DB.get WheelApi.Share, share_id do
+                :nil -> {:error, "not found"}
+                share ->
+                    if share.wheel_id != wheel_id do
+                        {:error, "not this wheel"}
+                    else
+                        share
+                            |> change(as_map(new_share))
+                            # Add the ID back into the changeset since it's required and won't be passed in the PUT body
+                            |> put_change(:id, share_id)
+                            |> put_change(:wheel_id, wheel_id)
+                            |> DB.update
+                            |> case do
+                                {:error, _} -> {:error, "db"}
+                                {:ok, updated} -> {:ok, as_map(updated)}
+                            end
+                    end
+            end
+        else
+            {:error, "no wheel"}
         end
     end
 end

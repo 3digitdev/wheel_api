@@ -1,6 +1,9 @@
 defmodule WheelApi.Router.WheelRouter do
     use Plug.Router
 
+    import WheelApi.Validation
+    import Ecto.Changeset
+
     require Logger
 
     plug :match
@@ -9,48 +12,52 @@ defmodule WheelApi.Router.WheelRouter do
     forward "/:wheel_id/shares", to: WheelApi.Router.ShareRouter
     forward "/:wheel_id/options", to: WheelApi.Router.OptionRouter
 
+    defp parse_body(conn, success_fn) do
+        %WheelApi.Wheel{}
+            |> WheelApi.Wheel.changeset(conn.body_params)
+            |> changeset_to_error_list
+            |> case do
+                {:ok, changeset}  -> success_fn.(changeset)
+                {:error, errors} -> send_resp(conn, 400, error_response(errors))
+            end
+    end
+
     get "/" do
         wheels = case conn.params |> Map.get("limit") do
             :nil -> WheelApi.Wheel.get_all
             limit -> WheelApi.Wheel.get_all limit
         end
-        send_resp(conn, 200, Poison.encode!(%{wheels: wheels}))
+        send_resp(conn, 200, success_response(wheels, "wheels"))
     end
 
     post "/" do
-        body = conn.body_params
-        case Map.get(body, "ticker") do
-            :nil -> send_resp(conn, 400, Poison.encode!(%{error: "You must provide a 'ticker' for the Wheel"}))
-            "" -> send_resp(conn, 400, Poison.encode!(%{error: "You must provide a 'ticker' for the Wheel"}))
-            ticker ->
-                case WheelApi.Wheel.create(ticker, Map.get(body, "description", "")) do
-                    {:ok, wheel} -> send_resp(conn, 201, Poison.encode!(%{wheel: wheel}))
-                    :error -> send_resp(conn, 400, Poison.encode!(%{error: "Invalid body format"}))
-                end
-        end
+        parse_body(conn, fn changeset ->
+            case changeset |> apply_changes |> WheelApi.Wheel.create do
+                {:ok, wheel} -> send_resp(conn, 201, success_response(wheel, "wheel"))
+                :error -> send_resp(conn, 500, error_response("Unknown DB failure on Wheel creation"))
+            end
+        end)
     end
 
     get "/:wheel_id" do
         case WheelApi.Wheel.get_single(wheel_id) do
-            :error -> send_resp(conn, 404, Poison.encode!(%{error: "Wheel '#{wheel_id}' not found"}))
-            {:ok, wheel} -> send_resp(conn, 200, Poison.encode!(%{wheel: wheel}))
+            {:ok, wheel} -> send_resp(conn, 200, success_response(wheel, "wheel"))
+            :error -> send_resp(conn, 404, error_response("Wheel '#{wheel_id}' not found"))
         end
     end
 
     put "/:wheel_id" do
-        try do
-            if WheelApi.Wheel.exists?(wheel_id) do
-                wheel = WheelApi.Wheel.from_map(conn.body_params, wheel_id)
-                case WheelApi.Wheel.update(wheel_id, wheel) do
-                    {:ok, updated} -> send_resp(conn, 200, Poison.encode!(%{wheel: updated}))
-                    _ -> send_resp(conn, 400, Poison.encode!(%{error: "Something went wrong"}))
-                end
-            else
-                send_resp(conn, 404, Poison.encode!(%{error: "Wheel '#{wheel_id}' not found"}))
+        parse_body(conn, fn changeset ->
+            case changeset |> apply_changes |> WheelApi.Wheel.update(String.to_integer(wheel_id)) do
+                {:ok, wheel} -> send_resp(conn, 200, success_response(wheel, "wheel"))
+                {:error, err} ->
+                    case err do
+                        "not found" -> send_resp(conn, 404, error_response("Wheel '#{wheel_id}' not found"))
+                        "db" -> send_resp(conn, 500, error_response("DB failure on Wheel update"))
+                        _ -> send_resp(conn, 500, error_response("Unknown failure on Wheel update"))
+                    end
             end
-        rescue
-            e in KeyError -> IO.inspect e; send_resp(conn, 400, Poison.encode!(%{error: "Missing required key '#{e.key}'"}))
-        end
+        end)
     end
 
     delete "/:wheel_id" do
