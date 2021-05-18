@@ -85,7 +85,7 @@ defmodule WheelApi.Share do
             {:error, err} ->
                 case err do
                     "not found" -> :ok
-                    e -> IO.puts e; :error
+                    _ -> :error
                 end
             {:ok, share} -> share |> from_map(id) |> DB.delete; :ok
         end

@@ -100,7 +100,7 @@ defmodule WheelApi.Option do
             {:error, err} ->
                 case err do
                     "not found" -> :ok
-                    e -> IO.puts e; :error
+                    _ -> :error
                 end
             {:ok, option} -> option |> from_map(id) |> DB.delete; :ok
         end
