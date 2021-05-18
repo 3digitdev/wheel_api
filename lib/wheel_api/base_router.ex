@@ -8,6 +8,7 @@ defmodule WheelApi.BaseRouter do
 
   # Order of Plugs matters.  In this way, we ensure that we only do other Parsing etc IF there is a route match!
   plug :match
+  plug ApiKeyPlug
   # Here we tell it to run all requests through these Plugs BEFORE we hit the routers below
   plug Plug.Logger
   plug Plug.Parsers,
@@ -33,6 +34,8 @@ defmodule WheelApi.BaseRouter do
         send_resp(conn, 400, error_response(msg))
       %Plug.Parsers.ParseError{exception: %Poison.SyntaxError{message: msg}} ->
         send_resp(conn, 400, error_response("Invalid JSON: '#{msg}'"))
+      %Plug.Conn.InvalidHeaderError{} ->
+        send_resp(conn, 401, "")
       %{message: msg} -> send_resp(conn, 500, error_response(msg))
       _ -> send_resp(conn, 500, error_response("Something unknown went wrong"))
     end
