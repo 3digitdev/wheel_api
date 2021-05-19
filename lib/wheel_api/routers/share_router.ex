@@ -20,11 +20,19 @@ defmodule WheelApi.Router.ShareRouter do
     end
 
     get "/" do
-        shares = case conn.params |> Map.get("limit") do
-            :nil -> WheelApi.Share.get_all
-            limit -> WheelApi.Share.get_all limit
+        wheel_id = String.to_integer(conn.params["wheel_id"])
+        result = case conn.params |> Map.get("limit") do
+            :nil -> WheelApi.Share.get_all(wheel_id)
+            limit -> WheelApi.Share.get_all(wheel_id, limit)
         end
-        send_resp(conn, 200, success_response(shares, "shares"))
+        case result do
+            {:ok, shares} -> send_resp(conn, 200, success_response(shares, "shares"))
+            {:error, err} ->
+                case err do
+                    "no wheel" -> send_resp(conn, 404, error_response("Wheel #{wheel_id} not found"))
+                    _ -> send_resp(conn, 500, error_response("Unknown failure on Share list"))
+                end
+        end
     end
 
     post "/" do

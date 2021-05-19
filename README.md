@@ -11,6 +11,7 @@
 - `WHEEL_API_DB_USER`:  The username to log into the DB with
 - `WHEEL_API_DB_PASS`:  The password to use to log into the DB
 - `WHEEL_API_DB_HOST`:  The hostname to use for the DB (`"localhost"` for local testing)
+- `WHEEL_API_SECRET`:   The expected API Key from hosts to connect  (yes I know this sucks as a solution, shut up)
 
 ### Instructions
 

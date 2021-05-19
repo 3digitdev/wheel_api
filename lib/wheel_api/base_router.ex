@@ -8,6 +8,7 @@ defmodule WheelApi.BaseRouter do
 
   # Order of Plugs matters.  In this way, we ensure that we only do other Parsing etc IF there is a route match!
   plug :match
+  plug CORSPlug
   plug ApiKeyPlug
   # Here we tell it to run all requests through these Plugs BEFORE we hit the routers below
   plug Plug.Logger

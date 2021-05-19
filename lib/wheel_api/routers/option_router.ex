@@ -20,11 +20,19 @@ defmodule WheelApi.Router.OptionRouter do
     end
 
     get "/" do
-        options = case conn.params |> Map.get("limit") do
-            :nil -> WheelApi.Option.get_all
-            limit -> WheelApi.Option.get_all limit
+        wheel_id = String.to_integer(conn.params["wheel_id"])
+        result = case conn.params |> Map.get("limit") do
+            :nil -> WheelApi.Option.get_all(wheel_id)
+            limit -> WheelApi.Option.get_all(wheel_id, limit)
         end
-        send_resp(conn, 200, success_response(options, "options"))
+        case result do
+            {:ok, options} -> send_resp(conn, 200, success_response(options, "options"))
+            {:error, err} ->
+                case err do
+                    "no wheel" -> send_resp(conn, 404, error_response("Wheel #{wheel_id} not found"))
+                    _ -> send_resp(conn, 500, error_response("Unknown failure on Option list"))
+                end
+        end
     end
 
     post "/" do

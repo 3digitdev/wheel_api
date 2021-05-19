@@ -35,6 +35,7 @@ defmodule WheelApi.Option do
     @spec as_map(%WheelApi.Option{}) :: map()
     def as_map(option) do
         %{
+            id: option.id,
             type: option.type,
             action: option.action,
             strike: option.strike,
@@ -71,11 +72,23 @@ defmodule WheelApi.Option do
         DB.exists?(from o in WheelApi.Option, where: o.id == ^option_id)
     end
 
-    @spec get_all(pos_integer()) :: [%WheelApi.Option{}]
-    def get_all(limit), do: (from option in WheelApi.Option, limit: ^limit) |> DB.all |> as_list
+    @spec get_all(pos_integer(), pos_integer()) :: [%WheelApi.Option{}]
+    def get_all(wheel_id, limit) do
+        if Wheel.exists?(wheel_id) do
+            {:ok, (from option in WheelApi.Option, limit: ^limit) |> DB.all |> as_list}
+        else
+            {:error, "no wheel"}
+        end
+    end
 
-    @spec get_all() :: [%WheelApi.Option{}]
-    def get_all, do: (from option in WheelApi.Option) |> DB.all |> as_list
+    @spec get_all(pos_integer()) :: [%WheelApi.Option{}]
+    def get_all(wheel_id) do
+        if Wheel.exists?(wheel_id) do
+            {:ok, (from option in WheelApi.Option) |> DB.all |> as_list}
+        else
+            {:error, "no wheel"}
+        end
+    end
 
     @spec get_single(pos_integer(), pos_integer()) :: {:ok, %WheelApi.Option{}} | {:error, String.t()}
     def get_single(option_id, wheel_id) do

@@ -56,11 +56,23 @@ defmodule WheelApi.Share do
         DB.exists?(from s in WheelApi.Share, where: s.id == ^share_id)
     end
 
-    @spec get_all(pos_integer()) :: [%WheelApi.Share{}]
-    def get_all(limit), do: (from share in WheelApi.Share, limit: ^limit) |> DB.all |> as_list
+    @spec get_all(pos_integer(), pos_integer()) :: [%WheelApi.Share{}]
+    def get_all(wheel_id, limit) do
+        if Wheel.exists?(wheel_id) do
+            {:ok, (from share in WheelApi.Share, limit: ^limit) |> DB.all |> as_list}
+        else
+            {:error, "no wheel"}
+        end
+    end
 
-    @spec get_all() :: [%WheelApi.Share{}]
-    def get_all, do: (from share in WheelApi.Share) |> DB.all |> as_list
+    @spec get_all(pos_integer()) :: [%WheelApi.Share{}]
+    def get_all(wheel_id) do
+        if Wheel.exists?(wheel_id) do
+            {:ok, (from share in WheelApi.Share) |> DB.all |> as_list}
+        else
+            {:error, "no wheel"}
+        end
+    end
 
     @spec get_single(pos_integer(), pos_integer()) :: {:ok, %WheelApi.Share{}} | {:error, String.t()}
     def get_single(share_id, wheel_id) do
